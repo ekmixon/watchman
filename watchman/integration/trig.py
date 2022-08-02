@@ -17,7 +17,7 @@ args = sys.argv[2:]
 
 with open(log_file_name, "a") as f:
     for arg in args:
-        f.write("%s " % time.time())
+        f.write(f"{time.time()} ")
         f.write(arg)
         f.write("\n")
 

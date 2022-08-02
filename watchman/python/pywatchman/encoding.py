@@ -19,12 +19,7 @@ if compat.PYTHON3:
     default_local_errors = "surrogateescape"
 
     def get_local_encoding():
-        if sys.platform == "win32":
-            # Watchman always returns UTF-8 encoded strings on Windows.
-            return "utf-8"
-        # On the Python 3 versions we support, sys.getfilesystemencoding never
-        # returns None.
-        return sys.getfilesystemencoding()
+        return "utf-8" if sys.platform == "win32" else sys.getfilesystemencoding()
 
 
 else:

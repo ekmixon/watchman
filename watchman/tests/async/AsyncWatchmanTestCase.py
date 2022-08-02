@@ -51,13 +51,12 @@ class AsyncWatchmanTestCase(unittest.TestCase):
 
     def get_file_list(self, root):
         expr = {"expression": ["exists"], "fields": ["name"]}
-        res = self.watchman_command("query", root, expr)["files"]
-        return res
+        return self.watchman_command("query", root, expr)["files"]
 
     def assert_sub_contains_all(self, sub, what):
         files = set(sub["files"])
         for obj in what:
-            assert obj in files, str(obj) + " was not in subscription " + repr(sub)
+            assert obj in files, f"{str(obj)} was not in subscription {repr(sub)}"
 
     def assert_file_sets_equal(self, iter1, iter2, message=None):
         set1 = set(iter1)

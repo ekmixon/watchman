@@ -181,11 +181,10 @@ os.environ["PYWATCHMAN_PATH"] = os.path.join(os.getcwd(), "python")
 os.environ["WATCHMAN_PYTHON_BIN"] = os.path.abspath(
     os.path.join(os.getcwd(), "python", "bin")
 )
-os.environ["PATH"] = "%s%s%s" % (
-    os.path.abspath(bin_dir),
-    os.pathsep,
-    os.environ["PATH"],
-)
+os.environ[
+    "PATH"
+] = f'{os.path.abspath(bin_dir)}{os.pathsep}{os.environ["PATH"]}'
+
 
 # We'll put all our temporary stuff under one dir so that we
 # can clean it all up at the end
@@ -208,9 +207,7 @@ class Result(unittest.TestResult):
     attempt = 0
 
     def shouldStop(self):
-        if Interrupt.wasInterrupted():
-            return True
-        return super(Result, self).shouldStop()
+        return True if Interrupt.wasInterrupted() else super(Result, self).shouldStop()
 
     def startTest(self, test):
         self.startTime = time.time()
@@ -295,9 +292,7 @@ class Result(unittest.TestResult):
         self.attempt = attempt
 
     def _attempts(self):
-        if self.attempt > 0:
-            return " (%d attempts)" % self.attempt
-        return ""
+        return " (%d attempts)" % self.attempt if self.attempt > 0 else ""
 
 
 def expandFilesList(files):
@@ -306,9 +301,12 @@ def expandFilesList(files):
     for g in args.files:
         if os.path.isdir(g):
             for dirname, _dirs, files in os.walk(g):
-                for f in files:
-                    if not f.startswith("."):
-                        res.append(os.path.normpath(os.path.join(dirname, f)))
+                res.extend(
+                    os.path.normpath(os.path.join(dirname, f))
+                    for f in files
+                    if not f.startswith(".")
+                )
+
         else:
             res.append(os.path.normpath(g))
     return res
@@ -323,32 +321,14 @@ def shouldIncludeTestFile(filename):
     global args
     fname = os.path.relpath(filename.replace(".pyc", ".py"))
     if args.files:
-        for f in args.files:
-            if f == fname:
-                return True
-        return False
-
-    if args.method:
-        # implies python tests only
-        if not fname.endswith(".py"):
-            return False
-
-    return True
+        return any(f == fname for f in args.files)
+    return bool(not args.method or fname.endswith(".py"))
 
 
 def shouldIncludeTestName(name):
     """used by our loader to respect the set of tests to run"""
     global args
-    if args.method:
-        for f in args.method:
-            if f in name:
-                # the strict original interpretation of this flag
-                # was pretty difficult to use in practice, so we
-                # now also allow substring matches against the
-                # entire test name.
-                return True
-        return False
-    return True
+    return any(f in name for f in args.method) if args.method else True
 
 
 class Loader(unittest.TestLoader):
@@ -365,9 +345,11 @@ class Loader(unittest.TestLoader):
         return filter(lambda name: shouldIncludeTestName(name), names)
 
     def loadTestsFromModule(self, module, *args, **kw):
-        if not shouldIncludeTestFile(module.__file__):
-            return unittest.TestSuite()
-        return super(Loader, self).loadTestsFromModule(module, *args, **kw)
+        return (
+            super(Loader, self).loadTestsFromModule(module, *args, **kw)
+            if shouldIncludeTestFile(module.__file__)
+            else unittest.TestSuite()
+        )
 
 
 loader = Loader()
@@ -386,11 +368,7 @@ if has_asyncio:
 for d in directories:
     suite.addTests(loader.discover(d, top_level_dir=d))
 
-if os.name == "nt":
-    t_globs = "tests/*.exe"
-else:
-    t_globs = "tests/*.t"
-
+t_globs = "tests/*.exe" if os.name == "nt" else "tests/*.t"
 tls = threading.local()
 
 # Manage printing from concurrent threads
@@ -460,7 +438,7 @@ def runner():
             asyncio.set_event_loop(asyncio.new_event_loop())
 
     except Exception as e:
-        print("while starting watchman: %s" % str(e))
+        print(f"while starting watchman: {str(e)}")
         traceback.print_exc()
         broken = True
 
@@ -474,17 +452,14 @@ def runner():
                 continue
 
             result = None
-            for attempt in range(0, args.retry_flaky + 1):
+            for attempt in range(args.retry_flaky + 1):
                 # Check liveness of the server
                 try:
                     client = pywatchman.client(timeout=3.0, sockpath=inst.getSockPath())
                     client.query("version")
                     client.close()
                 except Exception as exc:
-                    print(
-                        "Failed to connect to watchman server: %s; starting a new one"
-                        % exc
-                    )
+                    print(f"Failed to connect to watchman server: {exc}; starting a new one")
 
                     try:
                         inst.stop()
@@ -500,7 +475,7 @@ def runner():
                         # Allow tests to locate this default instance
                         WatchmanInstance.setSharedInstance(inst)
                     except Exception as e:
-                        print("while starting watchman: %s" % str(e))
+                        print(f"while starting watchman: {str(e)}")
                         traceback.print_exc()
                         broken = True
                         continue
@@ -604,22 +579,23 @@ if not args.testpilot_json:
 
 if "APPVEYOR" in os.environ:
     logdir = "logs7" if args.win7 else "logs"
-    logzip = "%s.zip" % logdir
+    logzip = f"{logdir}.zip"
     shutil.copytree(tempfile.tempdir, logdir)
     subprocess.call(["7z", "a", logzip, logdir])
     subprocess.call(["appveyor", "PushArtifact", logzip])
 
 if "CIRCLE_ARTIFACTS" in os.environ:
-    print("Creating %s/logs.zip" % os.environ["CIRCLE_ARTIFACTS"])
+    print(f'Creating {os.environ["CIRCLE_ARTIFACTS"]}/logs.zip')
     subprocess.call(
         [
             "zip",
             "-q",
             "-r",
-            "%s/logs.zip" % os.environ["CIRCLE_ARTIFACTS"],
+            f'{os.environ["CIRCLE_ARTIFACTS"]}/logs.zip',
             temp_dir.get_dir(),
         ]
     )
+
 
 if tests_failed or (tests_run == 0):
     if args.keep_if_fail:

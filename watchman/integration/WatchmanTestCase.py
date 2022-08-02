@@ -27,10 +27,7 @@ try:
 except ImportError:
     import unittest
 
-if pywatchman.compat.PYTHON3:
-    STRING_TYPES = (str, bytes)
-else:
-    STRING_TYPES = (str, unicode)  # noqa: F821
+STRING_TYPES = (str, bytes) if pywatchman.compat.PYTHON3 else (str, unicode)
 
 
 if os.name == "nt":
@@ -174,7 +171,7 @@ class WatchmanTestCase(TempDirPerTestMixin, unittest.TestCase):
         return name
 
     def _getLongTestID(self):
-        return "%s.%s.%s" % (self.id(), self.transport, self.encoding)
+        return f"{self.id()}.{self.transport}.{self.encoding}"
 
     def run(self, result):
         if result is None:
@@ -294,7 +291,7 @@ class WatchmanTestCase(TempDirPerTestMixin, unittest.TestCase):
         if status:
             return res
         if message is None:
-            message = "%s was not met in %s seconds: %s" % (cond, timeout, res)
+            message = f"{cond} was not met in {timeout} seconds: {res}"
         self.fail(message)
 
     def assertWaitForEqual(self, expected, actual_cond, timeout=None, message=None):
@@ -303,12 +300,8 @@ class WatchmanTestCase(TempDirPerTestMixin, unittest.TestCase):
         if status:
             return res
         if message is None:
-            message = "%s was not equal to %s in %s seconds: %s" % (
-                actual_cond,
-                expected,
-                timeout,
-                res,
-            )
+            message = f"{actual_cond} was not equal to {expected} in {timeout} seconds: {res}"
+
         self.fail(message)
 
     def getFileList(self, root, cursor=None, relativeRoot=None):
@@ -362,7 +355,7 @@ class WatchmanTestCase(TempDirPerTestMixin, unittest.TestCase):
         self, root, files=None, cursor=None, relativeRoot=None, message=None
     ):
         expected_files = files or []
-        if (cursor is not None) and cursor[0:2] == "n:":
+        if cursor is not None and cursor[:2] == "n:":
             # it doesn't make sense to repeat named cursor queries, as
             # the cursor moves each time
             self.getFileList(root, cursor=cursor, relativeRoot=relativeRoot)
@@ -463,9 +456,9 @@ def skip_for(transports=None, codecs=None):
         def wrapper(self, *args, **kwargs):
             if self.transport in transports or self.encoding in codecs:
                 self.skipTest(
-                    "test skipped for transport %s, codec %s"
-                    % (self.transport, self.encoding)
+                    f"test skipped for transport {self.transport}, codec {self.encoding}"
                 )
+
             return f(self, *args, **kwargs)
 
         return wrapper

@@ -37,7 +37,7 @@ class TestSince(WatchmanTestCase.WatchmanTestCase):
                 # All good
                 os._exit(0)
             except BaseException as exc:
-                print("Error in child process: %s" % exc)
+                print(f"Error in child process: {exc}")
                 os._exit(1)
 
         _pid, status = os.waitpid(pid, 0)

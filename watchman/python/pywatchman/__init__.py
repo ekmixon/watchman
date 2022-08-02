@@ -74,8 +74,7 @@ if _debugging:
 
     def log(fmt, *args):
         print(
-            "[%s] %s"
-            % (time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime()), fmt % args[:]),
+            f'[{time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())}] {fmt % args[:]}',
             file=sys.stderr,
         )
 
@@ -117,9 +116,7 @@ class WatchmanError(Exception):
         self.cmd = cmd
 
     def __str__(self):
-        if self.cmd:
-            return "%s, while executing %s" % (self.msg, self.cmd)
-        return self.msg
+        return f"{self.msg}, while executing {self.cmd}" if self.cmd else self.msg
 
 
 class BSERv1Unsupported(WatchmanError):
@@ -140,8 +137,9 @@ class WatchmanEnvironmentError(WatchmanError):
 class SocketConnectError(WatchmanError):
     def __init__(self, sockpath, exc):
         super(SocketConnectError, self).__init__(
-            "unable to connect to %s: %s" % (sockpath, exc)
+            f"unable to connect to {sockpath}: {exc}"
         )
+
         self.sockpath = sockpath
         self.exc = exc
 
@@ -163,7 +161,7 @@ class CommandError(WatchmanError):
     """
 
     def __init__(self, msg, cmd=None):
-        super(CommandError, self).__init__("watchman command error: %s" % (msg,), cmd)
+        super(CommandError, self).__init__(f"watchman command error: {msg}", cmd)
 
 
 def is_named_pipe_path(path):
@@ -200,9 +198,7 @@ class SockPath(object):
         """Returns a sockpath suitable for passing to the watchman
         CLI --sockname parameter"""
         log("legacy_sockpath called: %r", self)
-        if os.name == "nt":
-            return self.named_pipe
-        return self.unix_domain
+        return self.named_pipe if os.name == "nt" else self.unix_domain
 
 
 class Transport(object):
@@ -397,7 +393,6 @@ def _get_overlapped_result_ex_impl(pipe, olap, nbytes, millis, alertable):
             # WaitForSingleObjectEx returnes because the system added an I/O completion
             # routine or an asynchronous procedure call (APC) to the thread queue.
             SetLastError(WAIT_IO_COMPLETION)
-            pass
         elif waitReturnCode == WAIT_TIMEOUT:
             # We reached the maximum allowed wait time, the IO operation failed
             # to complete in timely fashion.
@@ -443,7 +438,7 @@ class WindowsNamedPipeTransport(Transport):
         )
 
         err = GetLastError()
-        if self.pipe == INVALID_HANDLE_VALUE or self.pipe == 0:
+        if self.pipe in [INVALID_HANDLE_VALUE, 0]:
             self.pipe = None
             raise SocketConnectError(
                 self.sockpath.named_pipe, self._make_win_err("", err)
@@ -587,12 +582,7 @@ class WindowsNamedPipeTransport(Transport):
 
 
 def _default_binpath(binpath=None):
-    if binpath:
-        return binpath
-    # The test harness sets WATCHMAN_BINARY to the binary under test,
-    # so we use that by default, otherwise, allow resolving watchman
-    # from the users PATH.
-    return os.environ.get("WATCHMAN_BINARY", "watchman")
+    return binpath or os.environ.get("WATCHMAN_BINARY", "watchman")
 
 
 class CLIProcessTransport(Transport):
@@ -701,10 +691,9 @@ class BserCodec(Codec):
 
         response = b"".join(buf)
         try:
-            res = self._loads(response)
-            return res
+            return self._loads(response)
         except ValueError as e:
-            raise WatchmanError("watchman response decode error: %s" % e)
+            raise WatchmanError(f"watchman response decode error: {e}")
 
     def send(self, *args):
         cmd = bser.dumps(*args)  # Defaults to BSER v1
@@ -731,11 +720,7 @@ class Bser2WithFallbackCodec(BserCodec):
         super(Bser2WithFallbackCodec, self).__init__(
             transport, value_encoding, value_errors
         )
-        if compat.PYTHON3:
-            bserv2_key = "required"
-        else:
-            bserv2_key = "optional"
-
+        bserv2_key = "required" if compat.PYTHON3 else "optional"
         self.send(["version", {bserv2_key: ["bser-v2"]}])
 
         capabilities = self.receive()
@@ -746,12 +731,8 @@ class Bser2WithFallbackCodec(BserCodec):
                 "upgrade your watchman server."
             )
 
-        if capabilities["capabilities"]["bser-v2"]:
-            self.bser_version = 2
-            self.bser_capabilities = 0
-        else:
-            self.bser_version = 1
-            self.bser_capabilities = 0
+        self.bser_version = 2 if capabilities["capabilities"]["bser-v2"] else 1
+        self.bser_capabilities = 0
 
     def receive(self):
         buf = [self.transport.readBytes(sniff_len)]
@@ -772,10 +753,9 @@ class Bser2WithFallbackCodec(BserCodec):
 
         response = b"".join(buf)
         try:
-            res = self._loads(response)
-            return res
+            return self._loads(response)
         except ValueError as e:
-            raise WatchmanError("watchman response decode error: %s" % e)
+            raise WatchmanError(f"watchman response decode error: {e}")
 
     def send(self, *args):
         if hasattr(self, "bser_version"):
@@ -888,7 +868,7 @@ class client(object):
                 self.transport = WindowsNamedPipeTransport
             elif transport == "unix" and os.name == "nt":
                 self.transport = WindowsUnixSocketTransport
-            elif transport == "local" or transport == "unix":
+            elif transport in ["local", "unix"]:
                 self.transport = UnixSocketTransport
             elif transport == "cli":
                 self.transport = CLIProcessTransport
@@ -899,7 +879,7 @@ class client(object):
             elif transport == "tcp":
                 self.transport = TcpSocketTransport
             else:
-                raise WatchmanError("invalid transport %s" % transport)
+                raise WatchmanError(f"invalid transport {transport}")
 
         sendEncoding = str(sendEncoding or os.getenv("WATCHMAN_ENCODING") or "bser")
         recvEncoding = str(recvEncoding or os.getenv("WATCHMAN_ENCODING") or "bser")
@@ -949,12 +929,10 @@ class client(object):
         elif enc == "json":
             return JsonCodec
         else:
-            raise WatchmanError("invalid encoding %s" % enc)
+            raise WatchmanError(f"invalid encoding {enc}")
 
     def _hasprop(self, result, name):
-        if self.useImmutableBser:
-            return hasattr(result, name)
-        return name in result
+        return hasattr(result, name) if self.useImmutableBser else name in result
 
     def _resolvesockname(self):
         # if invoked via a trigger, watchman will set this env var; we
@@ -988,7 +966,7 @@ class client(object):
 
         result = bser.loads(stdout)
         if "error" in result:
-            raise WatchmanError("get-sockname error: %s" % result["error"])
+            raise WatchmanError(f'get-sockname error: {result["error"]}')
 
         def get_path_result(name):
             value = result.get(name, None)
@@ -1073,15 +1051,15 @@ class client(object):
 
         if self._hasprop(result, "subscription"):
             sub = result["subscription"]
-            if not (sub in self.subs):
+            if sub not in self.subs:
                 self.subs[sub] = []
             self.subs[sub].append(result)
 
             # also accumulate in {root,sub} keyed store
             root = os.path.normpath(os.path.normcase(result["root"]))
-            if not root in self.sub_by_root:
+            if root not in self.sub_by_root:
                 self.sub_by_root[root] = {}
-            if not sub in self.sub_by_root[root]:
+            if sub not in self.sub_by_root[root]:
                 self.sub_by_root[root][sub] = []
             self.sub_by_root[root][sub].append(result)
 
@@ -1090,11 +1068,7 @@ class client(object):
     def isUnilateralResponse(self, res):
         if "unilateral" in res and res["unilateral"]:
             return True
-        # Fall back to checking for known unilateral responses
-        for k in self.unilateral:
-            if k in res:
-                return True
-        return False
+        return any(k in res for k in self.unilateral)
 
     def getLog(self, remove=True):
         """Retrieve buffered log data

@@ -31,7 +31,7 @@ if os.name == "nt":
 
 def srcs(names):
     """transform a list of sources to be relative to py_dir"""
-    return ["%s/%s" % (py_dir, n) for n in names]
+    return [f"{py_dir}/{n}" for n in names]
 
 
 setup(

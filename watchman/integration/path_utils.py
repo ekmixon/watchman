@@ -28,7 +28,7 @@ if os.name == "nt":
 
         h = create_file(c_path, access, mode, 0, disposition, flags, 0)
         if h == -1:
-            raise WindowsError("Failed to open file: " + path)
+            raise WindowsError(f"Failed to open file: {path}")
 
         return h
 

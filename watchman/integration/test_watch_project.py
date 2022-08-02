@@ -31,7 +31,7 @@ class TestWatchProject(WatchmanTestCase.WatchmanTestCase):
                 # encode the test criteria in the dirname so that we can
                 # figure out which test scenario failed more easily
 
-                suffix = "-%s-%s-%s-%s" % (touch, expect_watch, expect_rel, expect_pass)
+                suffix = f"-{touch}-{expect_watch}-{expect_rel}-{expect_pass}"
                 suffix = suffix.replace("/", "Z")
                 d = self.mkdtemp(suffix=suffix)
 
@@ -42,11 +42,7 @@ class TestWatchProject(WatchmanTestCase.WatchmanTestCase):
                 if touch_watchmanconfig:
                     make_empty_watchmanconfig(d)
 
-                if expect_watch:
-                    expect_watch = os.path.join(d, expect_watch)
-                else:
-                    expect_watch = d
-
+                expect_watch = os.path.join(d, expect_watch) if expect_watch else d
                 if expect_pass:
                     res = client.query("watch-project", dir_to_watch)
 

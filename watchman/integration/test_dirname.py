@@ -16,12 +16,12 @@ import WatchmanTestCase
 class TestDirName(WatchmanTestCase.WatchmanTestCase):
     def test_dirname(self):
         root = self.mkdtemp()
-        for i in range(0, 5):
+        for i in range(5):
             istr = str(i)
             os.makedirs(os.path.join(root, istr, istr, istr, istr, istr))
             self.touchRelative(root, "a")
             self.touchRelative(root, istr, "a")
-            self.touchRelative(root, "%sa" % istr)
+            self.touchRelative(root, f"{istr}a")
             self.touchRelative(root, istr, istr, "a")
             self.touchRelative(root, istr, istr, istr, "a")
             self.touchRelative(root, istr, istr, istr, istr, "a")

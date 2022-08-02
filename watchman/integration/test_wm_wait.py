@@ -20,8 +20,7 @@ class TestWatchmanWait(WatchmanTestCase.WatchmanTestCase):
         return True
 
     def spawnWatchmanWait(self, cmdArgs):
-        wait_script = os.environ.get("WATCHMAN_WAIT_PATH")
-        if wait_script:
+        if wait_script := os.environ.get("WATCHMAN_WAIT_PATH"):
             args = [wait_script]
         else:
             args = [
@@ -33,8 +32,7 @@ class TestWatchmanWait(WatchmanTestCase.WatchmanTestCase):
         env = os.environ.copy()
         sock_path = WatchmanInstance.getSharedInstance().getSockPath()
         env["WATCHMAN_SOCK"] = sock_path.legacy_sockpath()
-        pywatchman_path = env.get("PYWATCHMAN_PATH")
-        if pywatchman_path:
+        if pywatchman_path := env.get("PYWATCHMAN_PATH"):
             env["PYTHONPATH"] = pywatchman_path
         return subprocess.Popen(
             args, env=env, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE
@@ -55,8 +53,9 @@ class TestWatchmanWait(WatchmanTestCase.WatchmanTestCase):
         # wait for the watch to appear
         self.assertWaitFor(
             lambda: self.rootIsWatched(root),
-            message="%s was not watched by watchman-wait" % root,
+            message=f"{root} was not watched by watchman-wait",
         )
+
 
         # now wait for it to be ready to query.  The easiest way
         # to do this is to ask for the watch ourselves, as that

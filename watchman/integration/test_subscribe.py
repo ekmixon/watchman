@@ -43,10 +43,7 @@ class TestSubscribe(WatchmanTestCase.WatchmanTestCase):
         return False
 
     def matchStateSubscription(self, subdata, mode):
-        for sub in subdata:
-            if mode in sub:
-                return sub
-        return None
+        return next((sub for sub in subdata if mode in sub), None)
 
     def assertWaitForAssertedStates(self, root, states):
         def sortStates(states):
@@ -609,13 +606,17 @@ class TestSubscribe(WatchmanTestCase.WatchmanTestCase):
         root = self.mkdtemp()
         self.watchmanCommand("watch", root)
         clock = self.watchmanCommand("clock", root)["clock"]
-        for _ in range(0, 100):
+        for _ in range(100):
             clients = []
-            for i in range(0, 20):
+            for i in range(20):
                 client = self.getClient(no_cache=True)
                 client.query(
-                    "subscribe", root, "sub%s" % i, {"fields": ["name"], "since": clock}
+                    "subscribe",
+                    root,
+                    f"sub{i}",
+                    {"fields": ["name"], "since": clock},
                 )
+
                 self.touchRelative(root, "a")
                 clients.append(client)
             for client in clients:
@@ -730,10 +731,14 @@ class TestSubscribe(WatchmanTestCase.WatchmanTestCase):
 
     def findSubscriptionContainingFile(self, subdata, filename):
         filename = norm_relative_path(filename)
-        for dat in subdata:
-            if "files" in dat and filename in self.normFileList(dat["files"]):
-                return dat
-        return None
+        return next(
+            (
+                dat
+                for dat in subdata
+                if "files" in dat and filename in self.normFileList(dat["files"])
+            ),
+            None,
+        )
 
     def normFileList(self, files):
         return sorted(map(norm_relative_path, files))

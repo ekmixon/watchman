@@ -15,10 +15,7 @@ import WatchmanInstance
 import WatchmanTestCase
 
 
-if pywatchman.compat.PYTHON3:
-    STRING_TYPES = (str, bytes)
-else:
-    STRING_TYPES = (str, unicode)  # noqa: F821
+STRING_TYPES = (str, bytes) if pywatchman.compat.PYTHON3 else (str, unicode)
 
 
 class WatchmanSCMTestCase(WatchmanTestCase.WatchmanTestCase):
@@ -35,13 +32,13 @@ class WatchmanSCMTestCase(WatchmanTestCase.WatchmanTestCase):
         try:
             out, err = self.hg(["help", "--extension", "fsmonitor"])
         except Exception as e:
-            self.skipTest("fsmonitor is not available: %s" % str(e))
+            self.skipTest(f"fsmonitor is not available: {str(e)}")
         else:
             out = out.decode("utf-8")
             err = err.decode("utf-8")
             fail_str = "failed to import extension"
             if (fail_str in out) or (fail_str in err):
-                self.skipTest("hg configuration is broken: %s %s" % (out, err))
+                self.skipTest(f"hg configuration is broken: {out} {err}")
 
     def checkOSApplicability(self):
         if os.name == "nt":
@@ -55,26 +52,22 @@ class WatchmanSCMTestCase(WatchmanTestCase.WatchmanTestCase):
         sockpath = WatchmanInstance.getSharedInstance().getSockPath()
         env["WATCHMAN_SOCK"] = sockpath.legacy_sockpath()
         p = subprocess.Popen(
-            [
-                env.get("EDEN_HG_BINARY", "hg"),
-                # we force the extension on.  This is a soft error for
-                # mercurial if it is not available, so we also employ
-                # the skipIfNoFSMonitor() test above to make sure the
-                # environment is sane.
-                "--config",
-                "extensions.fsmonitor=",
-                # Deployed versions of mercurial regressed and stopped
-                # respecting the WATCHMAN_SOCK environment override, so
-                # we have to reach in and force their hardcoded sockpath here.
-                "--config",
-                "fsmonitor.sockpath=%s" % sockpath.legacy_sockpath(),
-            ]
-            + args,
+            (
+                [
+                    env.get("EDEN_HG_BINARY", "hg"),
+                    "--config",
+                    "extensions.fsmonitor=",
+                    "--config",
+                    f"fsmonitor.sockpath={sockpath.legacy_sockpath()}",
+                ]
+                + args
+            ),
             env=env,
             cwd=cwd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
+
         out, err = p.communicate()
         if p.returncode != 0:
             raise Exception("hg %r failed: %s, %s" % (args, out, err))

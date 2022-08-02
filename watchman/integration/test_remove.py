@@ -42,5 +42,5 @@ class TestRemove(WatchmanTestCase.WatchmanTestCase):
 
         self.assertWaitFor(
             lambda: not self.rootIsWatched(root),
-            message="%s should be cancelled" % root,
+            message=f"{root} should be cancelled",
         )

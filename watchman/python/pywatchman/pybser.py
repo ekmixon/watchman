@@ -62,7 +62,7 @@ def _int_size(x):
     elif long(-0x8000000000000000) <= x <= long(0x7FFFFFFFFFFFFFFF):
         return 8
     else:
-        raise RuntimeError("Cannot represent value: " + str(x))
+        raise RuntimeError(f"Cannot represent value: {str(x)}")
 
 
 def _buf_pos(buf, pos):
@@ -164,10 +164,7 @@ class _bser_buffer(object):
         if isinstance(val, bool):
             needed = 1
             self.ensure_size(needed)
-            if val:
-                to_encode = BSER_TRUE
-            else:
-                to_encode = BSER_FALSE
+            to_encode = BSER_TRUE if val else BSER_FALSE
             struct.pack_into(b"=c", self.buf, self.wpos, to_encode)
             self.wpos += needed
         elif val is None:
@@ -210,10 +207,7 @@ class _bser_buffer(object):
             else:
                 raise RuntimeError("Cannot represent this mapping value")
             self.wpos += needed
-            if compat.PYTHON3:
-                iteritems = val.items()
-            else:
-                iteritems = val.iteritems()  # noqa: B301 Checked version above
+            iteritems = val.items() if compat.PYTHON3 else val.iteritems()
             for k, v in iteritems:
                 self.append_string(k)
                 self.append_recursive(v)
@@ -286,7 +280,7 @@ class _BunserDict(object):
         try:
             return self._values[self._keys.index(key)]
         except ValueError:
-            raise KeyError("_BunserDict has no key %s" % key)
+            raise KeyError(f"_BunserDict has no key {key}")
 
     def __len__(self):
         return len(self._keys)
@@ -324,9 +318,9 @@ class Bunser(object):
             fmt = b"=q"
         else:
             raise ValueError(
-                "Invalid bser int encoding 0x%s at position %s"
-                % (binascii.hexlify(int_type).decode("ascii"), pos)
+                f'Invalid bser int encoding 0x{binascii.hexlify(int_type).decode("ascii")} at position {pos}'
             )
+
         int_val = struct.unpack_from(fmt, buf, pos + 1)[0]
         return (int_val, pos + needed)
 
@@ -413,12 +407,7 @@ class Bunser(object):
 
     def loads_recursive(self, buf, pos):
         val_type = _buf_pos(buf, pos)
-        if (
-            val_type == BSER_INT8
-            or val_type == BSER_INT16
-            or val_type == BSER_INT32
-            or val_type == BSER_INT64
-        ):
+        if val_type in [BSER_INT8, BSER_INT16, BSER_INT32, BSER_INT64]:
             return self.unser_int(buf, pos)
         elif val_type == BSER_REAL:
             val = struct.unpack_from(b"=d", buf, pos + 1)[0]
@@ -441,18 +430,17 @@ class Bunser(object):
             return self.unser_template(buf, pos)
         else:
             raise ValueError(
-                "unhandled bser opcode 0x%s"
-                % binascii.hexlify(val_type).decode("ascii")
+                f'unhandled bser opcode 0x{binascii.hexlify(val_type).decode("ascii")}'
             )
 
 
 def _pdu_info_helper(buf):
     bser_version = -1
-    if buf[0:2] == EMPTY_HEADER[0:2]:
+    if buf[:2] == EMPTY_HEADER[:2]:
         bser_version = 1
         bser_capabilities = 0
         expected_len, pos2 = Bunser.unser_int(buf, 2)
-    elif buf[0:2] == EMPTY_HEADER_V2[0:2]:
+    elif buf[:2] == EMPTY_HEADER_V2[:2]:
         if len(buf) < 8:
             raise ValueError("Invalid BSER header")
         bser_version = 2

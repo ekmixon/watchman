@@ -95,8 +95,7 @@ class NodeTestCase(WatchmanTestCase.TempDirPerTestMixin, unittest.TestCase):
         )
         env["TMPDIR"] = self.tempdir
 
-        offline_mirror = env.get("YARN_OFFLINE_MIRROR_PATH_POINTER", None)
-        if offline_mirror:
+        if offline_mirror := env.get("YARN_OFFLINE_MIRROR_PATH_POINTER", None):
             with open(offline_mirror, "r") as f:
                 mirror = f.read().strip()
                 env["YARN_YARN_OFFLINE_MIRROR"] = mirror
@@ -116,7 +115,7 @@ class NodeTestCase(WatchmanTestCase.TempDirPerTestMixin, unittest.TestCase):
         env["TMP"] = env["TMPDIR"]
         env["TEMP"] = env["TMPDIR"]
         env["IN_PYTHON_HARNESS"] = "1"
-        env["NODE_PATH"] = "%s:%s" % (node_dir, env["TMPDIR"])
+        env["NODE_PATH"] = f'{node_dir}:{env["TMPDIR"]}'
         proc = subprocess.Popen(
             self.getCommandArgs(),
             env=env,

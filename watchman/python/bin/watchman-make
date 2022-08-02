@@ -9,10 +9,7 @@ import sys
 import pywatchman
 
 
-if pywatchman.compat.PYTHON3:
-    STRING_TYPES = (str, bytes)
-else:
-    STRING_TYPES = (str, unicode)  # noqa: F821
+STRING_TYPES = (str, bytes) if pywatchman.compat.PYTHON3 else (str, unicode)
 
 
 def patterns_to_terms(pats):
@@ -20,8 +17,10 @@ def patterns_to_terms(pats):
     if pats is None or len(pats) == 0:
         return ["true"]
     terms = ["anyof"]
-    for p in pats:
-        terms.append(["match", p, "wholename", {"includedotfiles": True}])
+    terms.extend(
+        ["match", p, "wholename", {"includedotfiles": True}] for p in pats
+    )
+
     return terms
 
 
@@ -54,10 +53,10 @@ class Target(object):
         query["since"] = client.query("clock", root_dir)["clock"]
 
         print(
-            "# Changes to files matching %s will execute `%s`"
-            % (" ".join(self.patterns), self.cmd),
+            f'# Changes to files matching {" ".join(self.patterns)} will execute `{self.cmd}`',
             file=sys.stderr,
         )
+
         sub = client.query("subscribe", root_dir, self.name, query)
 
     def consumeEvents(self, client):
@@ -77,7 +76,7 @@ class Target(object):
         if not self.triggered:
             return
         self.triggered = False
-        print("# Execute: `%s`" % self.cmd, file=sys.stderr)
+        print(f"# Execute: `{self.cmd}`", file=sys.stderr)
         subprocess.call(self.cmd, shell=True)
 
 
@@ -87,7 +86,7 @@ class MakefileTarget(Target):
     def __init__(self, name, make, targets, patterns):
         self.make = make
         self.targets = targets
-        cmd = "%s %s" % (self.make, " ".join(self.targets))
+        cmd = f'{self.make} {" ".join(self.targets)}'
         super(MakefileTarget, self).__init__(name, patterns, cmd)
 
     def __repr__(self):
@@ -121,7 +120,7 @@ class DefineTarget(argparse.Action):
             values = [values]
 
         if namespace.pattern is None or len(namespace.pattern) == 0:
-            print("no patterns were specified for target %s" % values, file=sys.stderr)
+            print(f"no patterns were specified for target {values}", file=sys.stderr)
             sys.exit(1)
 
         target = MakefileTarget(
@@ -242,9 +241,10 @@ def check_root(desired_root):
         return root
     except Exception as ex:
         print(
-            "--root=%s: specified path is invalid: %s" % (desired_root, ex),
+            f"--root={desired_root}: specified path is invalid: {ex}",
             file=sys.stderr,
         )
+
         sys.exit(1)
 
 
@@ -253,13 +253,13 @@ client = pywatchman.client(timeout=args.connect_timeout)
 try:
     client.capabilityCheck(required=["cmd-watch-project", "wildmatch"])
     root = check_root(args.root)
-    print("# Relative to %s" % root, file=sys.stderr)
+    print(f"# Relative to {root}", file=sys.stderr)
     for t in args.target:
         t.start(client, root)
         targets[t.name] = t
 
 except pywatchman.CommandError as ex:
-    print("watchman:", str(ex), file=sys.stderr)
+    print("watchman:", ex, file=sys.stderr)
     sys.exit(1)
 
 print("# waiting for changes", file=sys.stderr)
@@ -270,7 +270,7 @@ while True:
         client.setTimeout(600)
 
         result = client.receive()
-        for _, t in targets.items():
+        for t in targets.values():
             t.consumeEvents(client)
 
         # Now we wait for events to settle
@@ -279,7 +279,7 @@ while True:
         while not settled:
             try:
                 result = client.receive()
-                for _, t in targets.items():
+                for t in targets.values():
                     t.consumeEvents(client)
             except pywatchman.SocketTimeout as ex:
                 # Our short settle timeout hit, so we're now settled
@@ -287,7 +287,7 @@ while True:
                 break
 
         # Now we can work on executing the targets
-        for _, t in targets.items():
+        for t in targets.values():
             t.execute()
 
         # Print this at the bottom of the loop rather than the top
@@ -300,11 +300,11 @@ while True:
         try:
             vers = client.query("version")
         except Exception as ex:
-            print("watchman:", str(ex), file=sys.stderr)
+            print("watchman:", ex, file=sys.stderr)
             sys.exit(1)
 
     except pywatchman.WatchmanError as ex:
-        print("watchman:", str(ex), file=sys.stderr)
+        print("watchman:", ex, file=sys.stderr)
         sys.exit(1)
 
     except KeyboardInterrupt:

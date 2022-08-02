@@ -27,7 +27,7 @@ class TestTrigger(WatchmanTestCase.WatchmanTestCase):
         return True
 
     def hasTriggerInLogs(self, root, triggerName):
-        pat = "%s.*posix_spawnp: %s" % (re.escape(root), triggerName)
+        pat = f"{re.escape(root)}.*posix_spawnp: {triggerName}"
         r = re.compile(pat, re.I)
         for line in self.getServerLogContents():
             line = line.replace("\\", "/")
@@ -89,8 +89,9 @@ class TestTrigger(WatchmanTestCase.WatchmanTestCase):
 
         self.assertWaitFor(
             lambda: files_are_listed(),
-            message="%s should contain %s" % (trigger_log, json.dumps(files)),
+            message=f"{trigger_log} should contain {json.dumps(files)}",
         )
+
 
         def files_are_listed_json():
             if not os.path.exists(trigger_json):
@@ -109,7 +110,7 @@ class TestTrigger(WatchmanTestCase.WatchmanTestCase):
 
         self.assertWaitFor(
             lambda: files_are_listed_json(),
-            message="%s should contain %s" % (trigger_json, json.dumps(files)),
+            message=f"{trigger_json} should contain {json.dumps(files)}",
         )
 
     def test_legacyTrigger(self):
@@ -204,7 +205,7 @@ class TestTrigger(WatchmanTestCase.WatchmanTestCase):
             self.touchRelative(root, f)
             self.resumeWatchman()
 
-            self.validate_trigger_output(root, [f], "only %s" % f)
+            self.validate_trigger_output(root, [f], f"only {f}")
 
         remove_logs()
 

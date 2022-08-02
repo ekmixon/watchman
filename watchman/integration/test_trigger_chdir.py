@@ -56,12 +56,13 @@ class TestTrigger(WatchmanTestCase.WatchmanTestCase):
             {
                 "name": "cap",
                 "command": [sys.executable, os.path.join(THIS_DIR, "trig-cwd.py")],
-                "stdout": ">%s" % os.path.join(root, "trig.log"),
+                "stdout": f'>{os.path.join(root, "trig.log")}',
                 "expression": ["suffix", "txt"],
                 "stdin": "/dev/null",
                 "chdir": "sub",
             },
         )
+
 
         self.touchRelative(root, "A.txt")
         self.assertWaitFor(
@@ -87,13 +88,14 @@ class TestTrigger(WatchmanTestCase.WatchmanTestCase):
             {
                 "name": "cap",
                 "command": [sys.executable, os.path.join(THIS_DIR, "trig-cwd.py")],
-                "stdout": ">%s" % os.path.join(root, "trig.log"),
+                "stdout": f'>{os.path.join(root, "trig.log")}',
                 "expression": ["suffix", "txt"],
                 "relative_root": "sub1",
                 "stdin": "/dev/null",
                 "chdir": "sub2",
             },
         )
+
 
         self.touchRelative(root, "sub1", "A.txt")
         self.assertWaitFor(
@@ -105,9 +107,10 @@ class TestTrigger(WatchmanTestCase.WatchmanTestCase):
 
         self.assertWaitFor(
             lambda: self.fileContains(
-                os.path.join(root, "trig.log"), "WATCHMAN_ROOT=" + root
+                os.path.join(root, "trig.log"), f"WATCHMAN_ROOT={root}"
             )
         )
+
         self.assertWaitFor(
             lambda: self.fileContains(
                 os.path.join(root, "trig.log"),
@@ -129,17 +132,21 @@ class TestTrigger(WatchmanTestCase.WatchmanTestCase):
             {
                 "name": "cap",
                 "command": [sys.executable, os.path.join(THIS_DIR, "trig-cwd.py")],
-                "stdout": ">>%s" % os.path.join(root, "trig.log"),
+                "stdout": f'>>{os.path.join(root, "trig.log")}',
                 "expression": ["suffix", "txt"],
                 "stdin": ["name"],
                 "max_files_stdin": 2,
             },
         )
 
+
         self.touchRelative(root, "A.txt")
         self.assertWaitFor(
-            lambda: self.fileContains(os.path.join(root, "trig.log"), "PWD=" + root)
+            lambda: self.fileContains(
+                os.path.join(root, "trig.log"), f"PWD={root}"
+            )
         )
+
 
         self.assertTrue(
             not self.fileContains(
@@ -159,8 +166,11 @@ class TestTrigger(WatchmanTestCase.WatchmanTestCase):
             self.touchRelative(root, "D.txt")
 
             self.assertWaitFor(
-                lambda: self.fileContains(os.path.join(root, "trig.log"), "PWD=" + root)
+                lambda: self.fileContains(
+                    os.path.join(root, "trig.log"), f"PWD={root}"
+                )
             )
+
 
             if self.fileContains(
                 os.path.join(root, "trig.log"), "WATCHMAN_FILES_OVERFLOW=true"
@@ -181,11 +191,12 @@ class TestTrigger(WatchmanTestCase.WatchmanTestCase):
             {
                 "name": "cat",
                 "command": [sys.executable, os.path.join(THIS_DIR, "cat.py")],
-                "stdout": ">%s" % log_file,
+                "stdout": f">{log_file}",
                 "expression": ["suffix", "txt"],
                 "stdin": "NAME_PER_LINE",
             },
         )
+
 
         self.touchRelative(root, "A.txt")
         self.assertWaitFor(lambda: self.fileContains(log_file, "A.txt"))
@@ -212,11 +223,12 @@ class TestTrigger(WatchmanTestCase.WatchmanTestCase):
                 "name": "cat",
                 "command": [sys.executable, os.path.join(THIS_DIR, "cat.py")],
                 "relative_root": "subdir",
-                "stdout": ">%s" % log_file,
+                "stdout": f">{log_file}",
                 "expression": ["suffix", "txt"],
                 "stdin": "NAME_PER_LINE",
             },
         )
+
 
         self.touchRelative(root, "A.txt")
         self.touchRelative(root, "subdir", "B.txt")
@@ -233,11 +245,12 @@ class TestTrigger(WatchmanTestCase.WatchmanTestCase):
             {
                 "name": "cat",
                 "command": [sys.executable, os.path.join(THIS_DIR, "cat.py")],
-                "stdout": ">>%s" % log_file,
+                "stdout": f">>{log_file}",
                 "expression": ["suffix", "txt"],
                 "stdin": "NAME_PER_LINE",
             },
         )
+
 
         self.touchRelative(root, "A.txt")
         self.assertWaitFor(lambda: self.fileContains(log_file, "A.txt"))
@@ -261,11 +274,12 @@ class TestTrigger(WatchmanTestCase.WatchmanTestCase):
             {
                 "name": "cat",
                 "command": [sys.executable, os.path.join(THIS_DIR, "cat.py")],
-                "stdout": ">%s" % log_file,
+                "stdout": f">{log_file}",
                 "expression": ["suffix", "txt"],
                 "stdin": ["name"],
             },
         )
+
 
         self.touchRelative(root, "A.txt")
         self.assertWaitFor(lambda: self.fileHasValidJson(log_file))
@@ -285,11 +299,12 @@ class TestTrigger(WatchmanTestCase.WatchmanTestCase):
             {
                 "name": "cat",
                 "command": [sys.executable, os.path.join(THIS_DIR, "cat.py")],
-                "stdout": ">%s" % log_file,
+                "stdout": f">{log_file}",
                 "expression": ["suffix", "txt"],
                 "stdin": ["name", "size"],
             },
         )
+
 
         self.touchRelative(root, "A.txt")
         self.assertWaitFor(lambda: self.fileHasValidJson(log_file))

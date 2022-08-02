@@ -65,8 +65,5 @@ class TestSubscribe(AsyncWatchmanTestCase.AsyncWatchmanTestCase):
         self.assertNotEqual(None, dat)
         self.assertEqual(False, dat["is_fresh_instance"])
 
-        # Ensure that we observed the recrawl warning
-        warn = None
-        if "warning" in dat:
-            warn = dat["warning"]
+        warn = dat["warning"] if "warning" in dat else None
         self.assertRegex(warn, r"Recrawled this watch")

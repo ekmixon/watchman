@@ -52,7 +52,7 @@ class TestAgeOutWatch(WatchmanTestCase.WatchmanTestCase):
 
             # and unsubscribe from root and allow it to be reaped
             unsub = self.watchmanCommand("unsubscribe", root, "s")
-            self.assertTrue(unsub["deleted"], "deleted subscription %s" % unsub)
+            self.assertTrue(unsub["deleted"], f"deleted subscription {unsub}")
             # and now we should be ready to reap
             self.assertWaitFor(
                 lambda: not self.rootIsWatched(root) and not self.rootIsWatched(second)

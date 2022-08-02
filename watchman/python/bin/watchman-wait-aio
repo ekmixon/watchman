@@ -10,9 +10,7 @@ from pywatchman.aioclient import AIOClient as WatchmanClient
 
 
 def _with_timeout(task, timeout):
-    if timeout > 0:
-        return asyncio.wait_for(task, timeout)
-    return task
+    return asyncio.wait_for(task, timeout) if timeout > 0 else task
 
 
 class Subscription(object):
@@ -25,12 +23,7 @@ class Subscription(object):
         self.relpath = None  # Path relative to root of thr dir being watched
 
     def __str__(self):
-        return "Subscription(name=%s, root=%s, abspath=%s, relpath=%s)" % (
-            self.name,
-            self.root,
-            self.abspath,
-            self.relpath,
-        )
+        return f"Subscription(name={self.name}, root={self.root}, abspath={self.abspath}, relpath={self.relpath})"
 
     async def activate(self, client, patterns=None, fields=["name"]):
         """Activate the subscription. This function is a coroutine."""
@@ -38,8 +31,11 @@ class Subscription(object):
 
         if patterns:
             expr = ["anyof"]
-            for p in patterns:
-                expr.append(["match", p, "wholename", {"includedotfiles": True}])
+            expr.extend(
+                ["match", p, "wholename", {"includedotfiles": True}]
+                for p in patterns
+            )
+
         else:
             expr = ["true"]
 
@@ -116,9 +112,9 @@ class SubscriptionManager(object):
 
     def _check_path(self, path):
         if path in self.subscriptions:
-            raise ValueError("path %s already specified" % path)
+            raise ValueError(f"path {path} already specified")
         if not os.path.exists(path):
-            raise ValueError("path %s does not exist" % path)
+            raise ValueError(f"path {path} does not exist")
 
     async def _add_subscription(self, path):
         self._check_path(path)
@@ -141,9 +137,8 @@ class SubscriptionManager(object):
     def _format_record(self, rec):
         if len(self.fields) == 1:
             return self._format_field(self.fields[0], rec)
-        else:
-            output = [self._format_field(f, rec[f]) for f in self.fields]
-            return output.join(self.separator)
+        output = [self._format_field(f, rec[f]) for f in self.fields]
+        return output.join(self.separator)
 
 
 def parse_args():

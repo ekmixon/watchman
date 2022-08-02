@@ -68,14 +68,14 @@ class TestFields(WatchmanTestCase.WatchmanTestCase):
             fields += ["nlink"]
 
         for field in fields:
-            self.assertEqual(file[field], getattr(st, "st_" + field), msg=field)
+            self.assertEqual(file[field], getattr(st, f"st_{field}"), msg=field)
 
         for field in ["mtime", "ctime"]:
-            self.assertEqual(file[field], int(getattr(st, "st_" + field)), msg=field)
+            self.assertEqual(file[field], int(getattr(st, f"st_{field}")), msg=field)
             seconds = file[field]
-            ms = file[field + "_ms"]
-            us = file[field + "_us"]
-            ns = file[field + "_ns"]
+            ms = file[f"{field}_ms"]
+            us = file[f"{field}_us"]
+            ns = file[f"{field}_ns"]
             self.assertEqual(ms // 1000, seconds)
             self.assertEqual(us // 1000, ms)
             self.assertEqual(ns // 1000, us)

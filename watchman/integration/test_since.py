@@ -147,7 +147,7 @@ class TestSince(WatchmanTestCase.WatchmanTestCase):
         # old-style clock value (implies fresh instance, event if the
         # pid is the same)
         pid = self.watchmanCommand("get-pid")["pid"]
-        self.assertFreshInstanceForSince(root, "c:%s:1" % pid, False)
+        self.assertFreshInstanceForSince(root, f"c:{pid}:1", False)
 
         # -- decompose clock and replace elements one by one
         clock = self.watchmanCommand("clock", root)["clock"]

@@ -116,9 +116,7 @@ o  changeset:
         }
 
     def getLocalFilename(self, saved_state_rev, metadata):
-        if metadata:
-            return saved_state_rev + "_" + metadata
-        return saved_state_rev
+        return f"{saved_state_rev}_{metadata}" if metadata else saved_state_rev
 
     # Creates a saved state (with no content) for the specified project at the
     # specified bookmark within the specified local storage path.

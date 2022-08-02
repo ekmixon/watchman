@@ -38,8 +38,7 @@ class BserTestCase(unittest.TestCase):
             env = os.environ.copy()
             env["TMPDIR"] = tempdir
 
-            offline_mirror = env.get("YARN_OFFLINE_MIRROR_PATH_POINTER", None)
-            if offline_mirror:
+            if offline_mirror := env.get("YARN_OFFLINE_MIRROR_PATH_POINTER", None):
                 with open(offline_mirror, "r") as f:
                     mirror = f.read().strip()
                     env["YARN_YARN_OFFLINE_MIRROR"] = mirror
@@ -59,6 +58,6 @@ class BserTestCase(unittest.TestCase):
 
             env["TMP"] = env["TMPDIR"]
             env["TEMP"] = env["TMPDIR"]
-            env["NODE_PATH"] = "%s:%s" % (env["TMPDIR"], env.get("NODE_PATH", ""))
+            env["NODE_PATH"] = f'{env["TMPDIR"]}:{env.get("NODE_PATH", "")}'
             subprocess.check_call([yarn_bin, "test"], cwd=bser_dir, env=env)
             self.assertTrue(True, "test completed")

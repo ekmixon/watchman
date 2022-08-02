@@ -96,7 +96,7 @@ class InitWithDirMixin(object):
         # This doesn't work on Windows, but we don't expect to be hitting this
         # codepath on Windows anyway
         username = pwd.getpwuid(os.getuid())[0]
-        self.user_dir = os.path.join(self.base_dir, "%s-state" % username)
+        self.user_dir = os.path.join(self.base_dir, f"{username}-state")
         self.log_file_name = os.path.join(self.user_dir, "log")
         self.sock_file = os.path.join(self.user_dir, "sock")
         self.state_file = os.path.join(self.user_dir, "state")
@@ -184,11 +184,8 @@ class _Instance(object):
                 args, env=env, stdin=None, stdout=cli_log_file, stderr=cli_log_file
             )
         if self.debug_watchman:
-            print("Watchman instance PID: " + str(self.proc.pid))
-            if pywatchman.compat.PYTHON3:
-                user_input = input
-            else:
-                user_input = raw_input  # noqa:F821
+            print(f"Watchman instance PID: {str(self.proc.pid)}")
+            user_input = input if pywatchman.compat.PYTHON3 else raw_input
             user_input("Press Enter to continue...")
 
         # wait for it to come up

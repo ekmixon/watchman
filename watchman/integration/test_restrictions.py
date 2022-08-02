@@ -37,10 +37,7 @@ class TestWatchRestrictions(WatchmanTestCase.WatchmanTestCase):
                 for watch_type in ["watch", "watch-project"]:
                     # encode the test criteria in the dirname so that we can
                     # figure out which test scenario failed more easily
-                    d = self.mkdtemp(
-                        suffix="-%s-%s-%s-%s"
-                        % (filetype, name, expect_pass, watch_type)
-                    )
+                    d = self.mkdtemp(suffix=f"-{filetype}-{name}-{expect_pass}-{watch_type}")
                     if filetype == "directory":
                         os.mkdir(os.path.join(d, name))
                     elif filetype == "file":

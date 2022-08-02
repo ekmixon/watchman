@@ -136,7 +136,7 @@ class Subscription(object):
 
     def __init__(self, path):
         if path in subscriptions:
-            raise ValueError("path %s already specified" % path)
+            raise ValueError(f"path {path} already specified")
         self.name = path
         self.path = os.path.abspath(path)
         if not os.path.exists(self.path):
@@ -150,18 +150,17 @@ Perhaps you should use the --pattern option?"""
         subscriptions[self.name] = self
 
     def __repr__(self):
-        return "Subscription(root=%s, rel=%s, name=%s)" % (
-            self.root,
-            self.relpath,
-            self.name,
-        )
+        return f"Subscription(root={self.root}, rel={self.relpath}, name={self.name})"
 
     def start(self, client):
         dir_to_watch = self.path
         if args.pattern:
             expr = ["anyof"]
-            for p in args.pattern:
-                expr.append(["match", p, "wholename", {"includedotfiles": True}])
+            expr.extend(
+                ["match", p, "wholename", {"includedotfiles": True}]
+                for p in args.pattern
+            )
+
         else:
             expr = ["true"]
         if not os.path.isdir(self.path):
@@ -204,8 +203,7 @@ Perhaps you should use the --pattern option?"""
                     out.append(self.formatField(args.fields[0], f))
                 else:
                     # Otherwise it is a list of objects
-                    for fname in args.fields:
-                        out.append(self.formatField(fname, f[fname]))
+                    out.extend(self.formatField(fname, f[fname]) for fname in args.fields)
                 print(args.separator.join(out))
                 sys.stdout.flush()
                 total_events = total_events + 1
@@ -221,10 +219,7 @@ for path in args.path:
 # and start up the client + subscriptions
 client = pywatchman.client(timeout=args.connect_timeout)
 
-deadline = None
-if args.timeout > 0:
-    deadline = time.time() + args.timeout
-
+deadline = time.time() + args.timeout if args.timeout > 0 else None
 try:
     client.capabilityCheck(required=["term-dirname", "cmd-watch-project", "wildmatch"])
     for _, sub in subscriptions.items():
@@ -256,7 +251,7 @@ while deadline is None or time.time() < deadline:
         try:
             vers = client.query("version")
         except Exception as ex:
-            print("watchman:", str(ex), file=sys.stderr)
+            print("watchman:", ex, file=sys.stderr)
             sys.exit(1)
 
     except KeyboardInterrupt:

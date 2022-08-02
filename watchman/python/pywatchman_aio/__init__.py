@@ -31,10 +31,7 @@ SNIFF_LEN = 13
 # workaround is to do the old fashioned blocking process communication using a
 # ThreadPool.
 def _resolve_sockname_helper():
-    # if invoked via a trigger, watchman will set this env var; we
-    # should use it unless explicitly set otherwise
-    path = os.getenv("WATCHMAN_SOCK")
-    if path:
+    if path := os.getenv("WATCHMAN_SOCK"):
         return path
 
     cmd = ["watchman", "--output-encoding=bser", "get-sockname"]
@@ -50,9 +47,7 @@ def _resolve_sockname_helper():
         raise WatchmanError('"watchman" executable not in PATH (%s)', e)
 
     stdout, stderr = p.communicate()
-    exitcode = p.poll()
-
-    if exitcode:
+    if exitcode := p.poll():
         raise WatchmanError("watchman exited with code %d" % exitcode)
 
     result = bser.loads(stdout)
@@ -156,10 +151,9 @@ class AsyncBserCodec(AsyncCodec):
             rlen += len(b)
         response = bytes(buf)
         try:
-            res = self._loads(response)
-            return res
+            return self._loads(response)
         except ValueError as e:
-            raise WatchmanError("watchman response decode error: %s" % e)
+            raise WatchmanError(f"watchman response decode error: {e}")
 
     async def send(self, *args):
         cmd = bser.dumps(*args, version=2, capabilities=0)
@@ -365,7 +359,7 @@ class AIOClient(object):
             await self.sub_by_root[root][sub].put(response)
 
         elif self._is_unilateral(response):
-            raise WatchmanError("Unknown unilateral response: " + str(response))
+            raise WatchmanError(f"Unknown unilateral response: {str(response)}")
 
         else:
-            raise WatchmanError("Not a unilateral response: " + str(response))
+            raise WatchmanError(f"Not a unilateral response: {str(response)}")

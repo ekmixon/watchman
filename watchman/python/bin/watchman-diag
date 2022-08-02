@@ -37,7 +37,7 @@ class ProcessInfo(object):
     def procname(self, pid):
         if pid in self.pid_to_name:
             return self.pid_to_name[pid]
-        name = os.readlink("/proc/%s/exe" % pid)
+        name = os.readlink(f"/proc/{pid}/exe")
         try:
             name = os.path.realpath(name)
         except Exception as e:
@@ -65,9 +65,7 @@ class InotifyInfo(object):
                 break
             blob.append(buf)
         os.close(fd)
-        if len(blob) == 0:
-            return None
-        return "".join(blob)
+        return "".join(blob) if blob else None
 
     def parsefdinfo(self, blob):
         watches = 0
@@ -79,13 +77,13 @@ class InotifyInfo(object):
     def get_watches(self):
         watches = [("PID", "EXE", "FD", "WATCHES")]
         for fddir in glob.glob("/proc/*/fd"):
-            for fdnode in glob.glob(fddir + "/*"):
+            for fdnode in glob.glob(f"{fddir}/*"):
                 try:
                     l = os.readlink(fdnode)
                     if l != "anon_inode:inotify":
                         continue
                     _, _, pid, _, fdnum = fdnode.split("/")
-                    info = self.read_fdinfo("/proc/%s/fdinfo/%s" % (pid, fdnum))
+                    info = self.read_fdinfo(f"/proc/{pid}/fdinfo/{fdnum}")
                     if info is None:
                         watches.append(
                             (pid, self.procname(pid), fdnum, "<unknown> (see t8692428)")
@@ -110,7 +108,7 @@ def walk_root(root, case_sensitive, ignores):
 
     # the queue of dirs to analyze
     dirs = [root]
-    while len(dirs) > 0:
+    while dirs:
         dir = dirs.pop()
         for ent in os.listdir(dir):
             full = os.path.join(dir, ent)
@@ -140,8 +138,8 @@ def collect_watch_info(watchman, watch):
         with open(watchmanconfig_file) as f:
             file_config = json.load(f)
     if file_config != root_config:
-        print("Watchman root %s is using this configuration: %s" % (watch, root_config))
-        print("%s has this configuration: %s" % (watchmanconfig_file, file_config))
+        print(f"Watchman root {watch} is using this configuration: {root_config}")
+        print(f"{watchmanconfig_file} has this configuration: {file_config}")
         print_status(
             (
                 "** You should run: `watchman watch-del %s ; "
@@ -153,7 +151,7 @@ def collect_watch_info(watchman, watch):
     if not is_eden(watch):
         # Eden mounts don't use the sparse extension, so skip this bit
         print("\nSparse configuration for %s:" % watch)
-        passthru("cd %s && hg sparse" % watch, shell=True)
+        passthru(f"cd {watch} && hg sparse", shell=True)
 
         # Eden watcher is stateless and doesn't have this
         print("\nContent hash cache stats for %s:" % watch)
@@ -197,12 +195,12 @@ def cross_check_watch(watchman, watch, case_sensitive):
     ignores.append(".git")
     ignores.append(".svn")
 
-    print_status("Crawling %s..." % watch)
+    print_status(f"Crawling {watch}...")
     start = time.time()
     fs = walk_root(watch, case_sensitive, ignores)
     print_status("(took %ds)" % (time.time() - start))
     start = time.time()
-    print_status("Interrogating watchman about %s..." % watch)
+    print_status(f"Interrogating watchman about {watch}...")
 
     fields = ["name", "mode", "size", "mtime_f", "oclock"]
     if os.name == "posix":
@@ -243,9 +241,7 @@ def cross_check_watch(watchman, watch, case_sensitive):
     def diff_item(w_item, fs_item):
         diffs = []
         if w_item["name"] != fs_item[0]:
-            diffs.append(
-                "watchman name is `%s` vs fs `%s" % (w_item["name"], fs_item[0])
-            )
+            diffs.append(f'watchman name is `{w_item["name"]}` vs fs `{fs_item[0]}')
         st = fs_item[1]
         if w_item["mode"] != st.st_mode:
             diffs.append(
@@ -254,14 +250,12 @@ def cross_check_watch(watchman, watch, case_sensitive):
         if w_item["size"] != st.st_size and not stat.S_ISDIR(st.st_mode):
             diffs.append("watchman size is %d vs fs %d" % (w_item["size"], st.st_size))
         if w_item["mtime_f"] != st.st_mtime:
-            diffs.append(
-                "watchman mtime is %s vs fs %s" % (w_item["mtime_f"], st.st_mtime)
-            )
+            diffs.append(f'watchman mtime is {w_item["mtime_f"]} vs fs {st.st_mtime}')
         if os.name == "posix" and (w_item["ino"] != st.st_ino):
             diffs.append("watchman ino is %d vs fs %d" % (w_item["ino"], st.st_ino))
 
-        if len(diffs) > 0:
-            diffs.append("   oclock is %s" % w_item["oclock"])
+        if diffs:
+            diffs.append(f'   oclock is {w_item["oclock"]}')
             return diffs
         return None
 
@@ -276,26 +270,26 @@ def cross_check_watch(watchman, watch, case_sensitive):
         else:
             diff = diff_item(f, fs[key])
             if diff:
-                print("Conflicting information for %s:" % f["name"])
+                print(f'Conflicting information for {f["name"]}:')
                 for d in diff:
                     print(d)
 
     for key in fs:
-        if not key in all_names_in_watchman:
+        if key not in all_names_in_watchman:
             missing.append(fs[key])
 
     print_status(
         "There are %d items reported by watchman that do not exist on the fs:"
         % len(phantoms)
     )
-    if len(phantoms) > 0:
+    if phantoms:
         for item in phantoms:
             print(item)
 
     print_status(
         "There are %d items on the filesystem not reported by watchman:" % len(missing)
     )
-    if len(missing) > 0:
+    if missing:
         # Let's see if watchman had previously seen any of these
         names = ["anyof"]
         for item in missing:
@@ -315,7 +309,7 @@ def passthru(*args, **kwargs):
     try:
         subprocess.call(*args, **kwargs)
     except Exception as e:
-        print("Error while running %s %s: %s" % (args, kwargs, e))
+        print(f"Error while running {args} {kwargs}: {e}")
 
 
 if not os.isatty(sys.stdout.fileno()):
@@ -324,7 +318,7 @@ if not os.isatty(sys.stdout.fileno()):
     )
 
 # Print the basic system info
-print("Platform: %s" % sys.platform)
+print(f"Platform: {sys.platform}")
 if os.name == "posix":
     uname = os.uname()
     print_table([uname])
@@ -344,15 +338,16 @@ print("CLI version: (watchman -v)")
 passthru(["watchman", "--no-spawn", "-v"])
 print
 
-watchman_env_vars = [v for v in os.environ.keys() if v.startswith("WATCHMAN_")]
-if watchman_env_vars:
+if watchman_env_vars := [
+    v for v in os.environ.keys() if v.startswith("WATCHMAN_")
+]:
     print()
     print(
         "!!!WARNING!!! The following watchman related environment variables are set",
         "(this is unusual and may cause problems):",
     )
     for var in watchman_env_vars:
-        print("%s=%s" % (var, os.getenv(var)))
+        print(f"{var}={os.getenv(var)}")
     print()
 
 procinfo = ProcessInfo()
@@ -375,9 +370,9 @@ if sys.platform == "win32":
 
 def collect_state_info(path):
     try:
-        print("State information from %s" % path)
+        print(f"State information from {path}")
         print
-        print("State file: %s/state" % path)
+        print(f"State file: {path}/state")
         try:
             with open(os.path.join(path, "state"), "r") as f:
                 print(f.read())
@@ -388,14 +383,13 @@ def collect_state_info(path):
             with open(os.path.join(path, "log"), "r") as f:
                 lines = f.readlines()
                 tail = lines[-300:]
-                print("Log samples: %s/log" % path)
+                print(f"Log samples: {path}/log")
                 for line in tail:
                     print(line.rstrip())
         except FileNotFoundError:
             pass
     except Exception as e:
-        print("# %s" % str(e))
-        pass
+        print(f"# {str(e)}")
     print
 
 
@@ -409,11 +403,10 @@ for root in [
     if root is None or root == "":
         continue
 
-    for path in glob.glob("%s/*-state" % root):
+    for path in glob.glob(f"{root}/*-state"):
         collect_state_info(path)
 
-appdata = os.environ.get("LOCALAPPDATA")
-if appdata:
+if appdata := os.environ.get("LOCALAPPDATA"):
     watchman_appdata = os.path.join(appdata, "watchman")
     if os.path.exists(watchman_appdata):
         collect_state_info(watchman_appdata)

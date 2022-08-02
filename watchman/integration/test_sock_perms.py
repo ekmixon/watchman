@@ -36,12 +36,7 @@ except ImportError:
 )
 class TestSockPerms(unittest.TestCase):
     def _new_instance(self, config, expect_success=True):
-        if expect_success:
-            start_timeout = 20
-        else:
-            # If the instance is going to fail anyway then there's no point
-            # waiting so long
-            start_timeout = 5
+        start_timeout = 20 if expect_success else 5
         return WatchmanInstance.InstanceWithStateDir(
             config=config, start_timeout=start_timeout
         )
@@ -52,7 +47,7 @@ class TestSockPerms(unittest.TestCase):
         # must skip.
         groups = os.getgroups()
         for gid in groups:
-            if gid != os.getgid() and gid != os.getegid():
+            if gid not in [os.getgid(), os.getegid()]:
                 return gid
         self.skipTest("no usable groups found")
 
@@ -82,7 +77,7 @@ class TestSockPerms(unittest.TestCase):
         if status:
             return res
         if message is None:
-            message = "%s was not met in %s seconds: %s" % (cond, timeout, res)
+            message = f"{cond} was not met in {timeout} seconds: {res}"
         if get_debug_output is not None:
             message += "\ndebug output:\n%s" % get_debug_output()
         self.fail(message)
@@ -95,9 +90,7 @@ class TestSockPerms(unittest.TestCase):
             instance.start()
         self.assertEqual(ctx.exception.sockpath, instance.getSockPath().unix_domain)
 
-        wanted = "the permissions on %s allow others to write to it" % (
-            instance.user_dir
-        )
+        wanted = f"the permissions on {instance.user_dir} allow others to write to it"
         self.assertWaitFor(
             lambda: wanted in instance.getCLILogContents(),
             get_debug_output=lambda: instance.getCLILogContents(),

@@ -187,15 +187,11 @@ class Subscription(object):
         self.query = query
         self.path = os.path.abspath(path)
         if not os.path.exists(self.path):
-            print("path %s (%s) does not exist." % (path, self.path), file=sys.stderr)
+            print(f"path {path} ({self.path}) does not exist.", file=sys.stderr)
             sys.exit(1)
 
     def __repr__(self):
-        return "Subscription(path=%s, name=%s, query=%s)" % (
-            self.path,
-            self.name,
-            json.dumps(self.query),
-        )
+        return f"Subscription(path={self.path}, name={self.name}, query={json.dumps(self.query)})"
 
     def start(self, client):
         watch = client.query("watch-project", self.path)
@@ -215,19 +211,14 @@ class Subscription(object):
         keys = ["state-enter", "state-leave"]
         for key in keys:
             if key in sub:
-                out.append(key)
-                out.append(sub[key])
+                out.extend((key, sub[key]))
         keys = ["abandoned"]
-        for key in keys:
-            if key in sub:
-                out.append(key)
+        out.extend(key for key in keys if key in sub)
         if "metadata" in sub:
             metadata = sub["metadata"]
             keys = ["status", "rev", "partial", "distance"]
-            for key in keys:
-                if key in keys:
-                    out.append(str(metadata[key]))
-        return "[ %s ]" % (" ".join(out))
+            out.extend(str(metadata[key]) for key in keys if key in keys)
+        return f'[ {" ".join(out)} ]'
 
     def formatSubPdu(self, sub):
         # If fsmonitor metadata fields present, pretty-print
@@ -259,8 +250,7 @@ class Subscription(object):
                     out.append(self.formatField(repFields[0], f))
                 else:
                     # Otherwise it is a list of objects
-                    for fname, val in f.items():
-                        out.append(self.formatField(fname, val))
+                    out.extend(self.formatField(fname, val) for fname, val in f.items())
                 print(args.separator.join(out))
                 sys.stdout.flush()
                 total_events = total_events + 1
@@ -305,21 +295,21 @@ matchSubs = []
 for sub in subs["subscribers"]:
     info = sub["info"]
     if (
-        (subName is None or sub["info"]["name"] == subName)
-        and (subPid is None or str(sub["info"]["pid"]) == subPid)
-        and (subClient is None or str(sub["info"]["client"]) == subClient)
+        (subName is None or info["name"] == subName)
+        and (subPid is None or str(info["pid"]) == subPid)
+        and (subClient is None or str(info["client"]) == subClient)
     ):
         matchSubs.append(sub)
 
 if args.list:
-    if len(matchSubs) == 0:
+    if not matchSubs:
         print("No matching subscriptions")
     for sub in matchSubs:
         keys = None if args.full else ["name", "pid", "client"]
         print(json.dumps(getSubInfo(sub, keys=keys), indent=2), file=sys.stdout)
     sys.exit(0)
 
-if len(matchSubs) == 0:
+if not matchSubs:
     print(
         "Error, no matching subscriptions:\n"
         "\tcriteria: %s\n"
@@ -354,15 +344,12 @@ repQuery = matchSubs[0]["info"]["query"]
 # to capture the field definition here and use it only in the case
 # that it is a single field name,
 repFields = matchSubs[0]["info"]["query"].get("fields", [])
-repName = args.qname if args.qname else "replicate: " + matchSub["info"]["name"]
+repName = args.qname or "replicate: " + matchSub["info"]["name"]
 
 repSub = Subscription(name=repName, path=path, query=repQuery)
-print("%s" % (repSub))
+print(f"{repSub}")
 
-deadline = None
-if args.timeout > 0:
-    deadline = time.time() + args.timeout
-
+deadline = time.time() + args.timeout if args.timeout > 0 else None
 try:
     repSub.start(client)
 
@@ -391,7 +378,7 @@ while deadline is None or time.time() < deadline:
         try:
             vers = client.query("version")
         except Exception as ex:
-            print("watchman:", str(ex), file=sys.stderr)
+            print("watchman:", ex, file=sys.stderr)
             sys.exit(1)
 
     except KeyboardInterrupt:

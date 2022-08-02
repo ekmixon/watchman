@@ -59,13 +59,11 @@ class TestCookie(WatchmanTestCase.WatchmanTestCase):
         self.touchRelative(root, ".git/.watchman-cookie-%s-%d-1000000" % (host, pid))
 
         cookies = [
-            # Different process, same watch root
-            ".git/.watchman-cookie-%s-1-100000" % host,
-            # Different process, root dir instead of VCS dir
-            ".watchman-cookie-%s-1-100000" % host,
-            # Different process, different watch root
-            "foo/.watchman-cookie-%s-1-100000" % host,
+            f".git/.watchman-cookie-{host}-1-100000",
+            f".watchman-cookie-{host}-1-100000",
+            f"foo/.watchman-cookie-{host}-1-100000",
         ]
+
 
         if watch["watcher"] != "kqueue+fsevents":
             # With the split watch, a cookie is written in all top-level

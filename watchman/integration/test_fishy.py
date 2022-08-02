@@ -41,8 +41,9 @@ class TestFishy(WatchmanTestCase.WatchmanTestCase):
         # the problem with whatever sequence and timing of
         # operations was produced by the original php test
         subprocess.check_call(
-            "cd %s && mv foo bar && ln -s bar foo" % shellquote(root), shell=True
+            f"cd {shellquote(root)} && mv foo bar && ln -s bar foo", shell=True
         )
+
 
         self.resumeWatchman()
         self.assertFileList(root, files=["bar", "bar/a", "foo"], cursor=clock)
@@ -59,10 +60,10 @@ class TestFishy(WatchmanTestCase.WatchmanTestCase):
         # the problem with whatever sequence and timing of
         # operations was produced by the original php test
         subprocess.check_call(
-            "cd %s && touch a && mkdir d1 d2 && mv d1 d2 && mv d2/d1 . && mv a d1"
-            % shellquote(root),
+            f"cd {shellquote(root)} && touch a && mkdir d1 d2 && mv d1 d2 && mv d2/d1 . && mv a d1",
             shell=True,
         )
+
         self.resumeWatchman()
         self.assertFileList(root, files=["d1", "d1/a", "d2"], cursor=clock)
 

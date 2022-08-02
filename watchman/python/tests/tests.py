@@ -101,7 +101,7 @@ class TestTransportErrorHandling(unittest.TestCase):
                 str(e),
             )
         except Exception as e:
-            self.assertTrue(False, "expected a WatchmanError, but got " + str(e))
+            self.assertTrue(False, f"expected a WatchmanError, but got {str(e)}")
 
 
 class TestLocalTransport(unittest.TestCase):
@@ -121,7 +121,7 @@ class TestLocalTransport(unittest.TestCase):
         return path
 
     def make_deleted_windows_socket_path(self):
-        return "\\\\.\\pipe\\pywatchman-test-{}".format(uuid.uuid1().hex)
+        return f"\\\\.\\pipe\\pywatchman-test-{uuid.uuid1().hex}"
 
     def make_deleted_unix_socket_path(self):
         temp_dir = tempfile.mkdtemp()
@@ -261,21 +261,23 @@ class TestBSERDump(unittest.TestCase):
 
         self.roundtrip(u"Hello", value_encoding="utf8")
         self.roundtrip(u"Hello", value_encoding="ascii")
-        self.roundtrip(u"Hello" + PILE_OF_POO, value_encoding="utf8")
+        self.roundtrip(f"Hello{PILE_OF_POO}", value_encoding="utf8")
 
         # can't use the with form here because Python 2.6
         self.assertRaises(
             UnicodeDecodeError,
             self.roundtrip,
-            u"Hello" + PILE_OF_POO,
+            f"Hello{PILE_OF_POO}",
             value_encoding="ascii",
         )
+
         self.munged(
-            u"Hello" + PILE_OF_POO,
+            f"Hello{PILE_OF_POO}",
             u"Hello",
             value_encoding="ascii",
             value_errors="ignore",
         )
+
         self.roundtrip(b"hello" + NON_UTF8_STRING)
         self.assertRaises(
             UnicodeDecodeError,
@@ -306,21 +308,23 @@ class TestBSERDump(unittest.TestCase):
         self.roundtrip({"hello": b"there"})
         self.roundtrip({"hello": u"there"}, value_encoding="utf8")
         self.roundtrip({"hello": u"there"}, value_encoding="ascii")
-        self.roundtrip({"hello": u"there" + PILE_OF_POO}, value_encoding="utf8")
+        self.roundtrip({"hello": f"there{PILE_OF_POO}"}, value_encoding="utf8")
 
         # can't use the with form here because Python 2.6
         self.assertRaises(
             UnicodeDecodeError,
             self.roundtrip,
-            {"hello": u"there" + PILE_OF_POO},
+            {"hello": f"there{PILE_OF_POO}"},
             value_encoding="ascii",
         )
+
         self.munged(
-            {"Hello": u"there" + PILE_OF_POO},
+            {"Hello": f"there{PILE_OF_POO}"},
             {"Hello": u"there"},
             value_encoding="ascii",
             value_errors="ignore",
         )
+
         self.roundtrip({"Hello": b"there" + NON_UTF8_STRING})
         self.assertRaises(
             UnicodeDecodeError,
@@ -372,7 +376,7 @@ class TestBSERDump(unittest.TestCase):
         self.assertEqual(exp, dec)
         res = self.bser_mod.loads(templ, False)
 
-        for i in range(0, len(exp)):
+        for i in range(len(exp)):
             self.assertItemAttributes(exp[i], res[i])
 
     def test_pdu_info(self):
@@ -390,7 +394,7 @@ class TestBSERDump(unittest.TestCase):
         enc = self.bser_mod.dumps([1, 2, 3, "hello there, much larger"])
         self.assertEqual(
             (DEFAULT_BSER_VERSION, DEFAULT_BSER_CAPABILITIES, len(enc)),
-            self.bser_mod.pdu_info(enc[0:7]),
+            self.bser_mod.pdu_info(enc[:7]),
         )
 
     def test_pdu_len(self):
@@ -401,7 +405,7 @@ class TestBSERDump(unittest.TestCase):
         # even though we receive just a portion of the complete
         # data
         enc = self.bser_mod.dumps([1, 2, 3, "hello there, much larger"])
-        self.assertEqual(len(enc), self.bser_mod.pdu_len(enc[0:7]))
+        self.assertEqual(len(enc), self.bser_mod.pdu_len(enc[:7]))
 
     def test_garbage(self):
         # can't use the with form here because Python 2.6

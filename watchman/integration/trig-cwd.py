@@ -13,4 +13,4 @@ import os
 os.environ["PWD"] = os.getcwd()
 
 for k, v in os.environ.items():
-    print("%s=%s" % (k, v))
+    print(f"{k}={v}")
